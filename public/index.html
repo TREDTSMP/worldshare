@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>WORLDSHARE.EXE</title>
+<style>
+  :root { --g:#33ff33; --dg:#1a991a; --bg:#000; --warn:#ffcc00; --err:#ff4444; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--bg); color:var(--g); font-family:"Courier New",Consolas,monospace; font-size:16px; }
+  body { padding:16px; min-height:100vh; }
+  body::after { content:""; position:fixed; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px); }
+  .wrap { max-width:1100px; margin:0 auto; }
+  .box { border:2px solid var(--g); padding:12px 16px; margin-bottom:14px; }
+  h1 { margin:0; font-size:20px; letter-spacing:2px; font-weight:normal; }
+  .sub { color:var(--dg); }
+  .bar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  button { background:var(--bg); color:var(--g); border:2px solid var(--g); font:inherit; padding:6px 14px; cursor:pointer; text-transform:uppercase; }
+  button:hover, button.active { background:var(--g); color:var(--bg); }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button.danger { border-color:var(--err); color:var(--err); }
+  button.danger:hover { background:var(--err); color:var(--bg); }
+  .tabs { display:flex; gap:6px; margin-bottom:-2px; flex-wrap:wrap; }
+  .tabs button { border-bottom:none; }
+  .panel { border:2px solid var(--g); padding:16px; }
+  input[type=text], input[type=password] { background:var(--bg); color:var(--g); border:2px solid var(--g); font:inherit; padding:6px 8px; width:100%; }
+  input:focus, button:focus-visible { outline:2px dashed var(--g); outline-offset:2px; }
+  label { display:block; margin:10px 0 4px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { border:1px solid var(--dg); padding:6px 8px; text-align:left; vertical-align:top; font-size:14px; }
+  th { color:var(--bg); background:var(--g); }
+  .scroll { overflow-x:auto; }
+  .err { color:var(--err); } .warn { color:var(--warn); }
+  .progress { border:2px solid var(--g); height:22px; margin-top:10px; }
+  .progress div { height:100%; width:0; background:var(--g); }
+  .cursor::after { content:"_"; animation:blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity:0; } }
+  .hidden { display:none; }
+  #drop { border:2px dashed var(--g); padding:28px; text-align:center; margin-top:10px; }
+  #drop.over { background:#0a2a0a; }
+  pre { margin:0; white-space:pre-wrap; }
+  .login { max-width:460px; margin:8vh auto 0; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="box">
+    <div class="bar">
+      <h1>C:\WORLDSHARE&gt; <span class="cursor"></span></h1>
+      <div id="who" class="sub"></div>
+    </div>
+    <div class="sub">MINECRAFT WORLD SHARING SYSTEM v2.0 - AUTHORIZED PLAYERS ONLY</div>
+  </div>
+
+  <div id="loginView" class="login panel">
+    <pre>*** SECURITY CHECK ***
+ENTER YOUR MINECRAFT USERNAME AND PASSWORD.</pre>
+    <form id="loginForm" autocomplete="off">
+      <label for="u">USERNAME:</label>
+      <input type="text" id="u" required autocapitalize="off" spellcheck="false">
+      <label for="p">PASSWORD:</label>
+      <input type="password" id="p" required>
+      <p id="loginMsg" class="err"></p>
+      <button type="submit">[ LOGIN ]</button>
+    </form>
+  </div>
+
+  <div id="appView" class="hidden">
+    <div class="tabs">
+      <button data-tab="files" class="active">[ FILES ]</button>
+      <button data-tab="upload">[ UPLOAD ]</button>
+      <button data-tab="help">[ HELP ]</button>
+      <button id="logout">[ LOGOUT ]</button>
+    </div>
+
+    <div class="panel" id="tab-files">
+      <div class="bar"><span id="count" class="sub"></span><button id="refresh">[ REFRESH ]</button></div>
+      <p id="listMsg" class="err"></p>
+      <div class="scroll" style="margin-top:10px">
+        <table>
+          <thead><tr>
+            <th>FILE</th><th>EDITION</th><th>MC VERSION</th><th>SIZE</th>
+            <th>FILE CREATED/MODIFIED</th><th>UPLOADED</th><th>BY</th><th>ACTION</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="tab-upload">
+      <pre>SELECT A WORLD FILE (.zip OR .mcworld).
+ZIP THE WORLD FOLDER FIRST (the folder containing level.dat and region\).
+EDITION, VERSION AND DATES ARE DETECTED AUTOMATICALLY.
+MAX FILE SIZE: 50 MB (Supabase free plan).</pre>
+      <div id="drop">DRAG &amp; DROP FILE HERE<br>OR<br><br>
+        <button id="pick">[ BROWSE... ]</button>
+        <input type="file" id="file" class="hidden">
+      </div>
+      <p id="chosen" class="sub"></p>
+      <button id="go" disabled>[ START UPLOAD ]</button>
+      <div class="progress"><div id="bar"></div></div>
+      <p id="upMsg"></p>
+    </div>
+
+    <div class="panel hidden" id="tab-help">
+<pre>HOW TO USE A DOWNLOADED JAVA WORLD
+----------------------------------
+1. DOWNLOAD THE .ZIP FROM THE FILES TAB.
+2. UNZIP IT. YOU GET A FOLDER (level.dat, region\, ...).
+3. PUT THAT FOLDER IN:
+     WINDOWS : %appdata%\.minecraft\saves
+     MAC     : ~/Library/Application Support/minecraft/saves
+     LINUX   : ~/.minecraft/saves
+4. START MINECRAFT JAVA WITH THE MATCHING VERSION (see MC VERSION column)
+   AND OPEN THE WORLD UNDER SINGLEPLAYER.
+
+NOTES
+-----
+* OPENING A WORLD IN AN OLDER VERSION THAN IT WAS SAVED IN CAN BREAK IT.
+* KEEP A BACKUP COPY BEFORE OPENING.
+* ONLY THE UPLOADER CAN DELETE THEIR OWN FILES.</pre>
+    </div>
+  </div>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
